@@ -25,7 +25,7 @@ Vercel deployment, auth, and data. They share patterns and standards only.
 
 ---
 
-## 2. Engineering non-negotiables (18)
+## 2. Engineering non-negotiables (19)
 
 Every one of these came from a real bug on a prior product. They are binding.
 
@@ -164,20 +164,43 @@ Not "we'll add it later." Includes explicit public-read policies for
 guest-facing storefront data.
 *Why: one table shipped without RLS leaks every tenant's data.*
 
-> **Open decision — do not write policies against a JWT claim yet.** Supabase
-> does **not** populate a custom `tenant_id` claim in the access token by
-> default. The example below assumes one exists; it does not yet. We have not
-> decided how tenant scoping reaches RLS — a **custom access token hook** that
-> stamps `tenant_id` into the JWT, versus a **`users`-table lookup**
-> (`tenant_id = (select tenant_id from users where id = auth.uid())`). Until
-> that decision is made and implemented, do not ship a policy that reads
-> `auth.jwt() ->> 'tenant_id'` — it will evaluate to NULL and silently deny (or,
-> if written loosely, expose) rows.
+Tenant scoping in RLS uses a **`tenant_users`-table lookup**, reusing the
+pattern already running in production on Palstro (the ERP). We do **not** use
+JWT `tenant_id` claims. The canonical helper — use it verbatim; every part is
+load-bearing:
+```sql
+CREATE OR REPLACE FUNCTION get_tenant_ids()
+RETURNS uuid[]
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN COALESCE(ARRAY(
+    SELECT tenant_id FROM tenant_users
+    WHERE user_id = auth.uid() AND is_active = TRUE
+  ), '{}');
+END;
+$$;
+```
+Why each part matters:
+- **Returns `uuid[]` (an array)** — a user can belong to multiple tenants.
+- **`SECURITY DEFINER`** — avoids recursive RLS evaluation on `tenant_users`
+  (the policy would otherwise re-invoke itself while checking that table).
+- **`STABLE`** — lets Postgres cache the result within a single statement
+  instead of re-running the lookup once per row.
+- **`SET search_path = public`** — guards against search_path injection.
+- **`COALESCE(..., '{}')`** — a NULL array makes `= ANY(...)` return NULL
+  rather than FALSE, which fails **open**. The empty-array fallback keeps an
+  unmatched user locked out.
+- **`plpgsql`, not `sql`** — table references resolve at runtime, so the
+  function compiles even when `tenant_users` does not yet exist at creation
+  time.
+
+Policies scope with `tenant_id = ANY(get_tenant_ids())`:
 ```sql
 alter table bookings enable row level security;
--- PLACEHOLDER shape only — depends on the tenant-scoping decision above:
 create policy tenant_isolation on bookings
-  using (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+  using (tenant_id = ANY(get_tenant_ids()));
 ```
 
 ### 14. "Export All Data" from day one
@@ -208,6 +231,19 @@ const brand = settings.colors.primary; // never a literal hex in a component
 Same convention as Palstro. Reviewed before every PR.
 *Why: rules that aren't written down aren't followed.*
 
+### 19. RLS is the floor, not the ceiling
+Because `get_tenant_ids()` returns **every** tenant the user belongs to, RLS
+alone lets a multi-tenant user read rows from all of their tenants at once.
+Every application query must **additionally** scope to the single active tenant
+held in tenant context (`.eq('tenant_id', activeTenantId)`).
+*Why: the two layers guard different things. RLS prevents cross-tenant leakage
+between different users; the active-tenant filter prevents blending data across
+a single user's own tenants. Neither replaces the other.*
+```ts
+// RLS already restricts to the user's tenants; still scope to the active one:
+query.eq('tenant_id', activeTenantId);
+```
+
 ---
 
 ## 3. Multi-tenancy model
@@ -222,13 +258,28 @@ Same convention as Palstro. Reviewed before every PR.
   - *Guest-facing sites → URL-based.* The host/slug identifies the tenant
     (e.g. `heledonhotels.com` → Heledon), and the visitor sees that tenant's
     storefront. Storefront reads run through public-read RLS policies.
-  - *Admin → JWT-based.* The user logs in; the JWT carries a `tenant_id` claim;
-    the correct tenant loads. RLS reads the claim via `auth.jwt()`. See Rule 13:
-    the exact claim-vs-lookup mechanism is not yet decided.
-- **Config in `tenant_settings`:** one row per tenant holding a JSON config
-  (colors, logo/hero URLs, fonts, template, name/tagline, contact info, section
-  visibility/order, currency/language). Split into more tables only if it later
-  proves necessary.
+  - *Admin → user-based.* The user logs in; their tenant memberships come from
+    a `tenant_users`-table lookup, and the active tenant loads into tenant
+    context. RLS derives the user's tenants via `get_tenant_ids()` — a
+    `tenant_users` lookup, not a JWT claim. See Rule 13.
+- **Config split — tenant vs property:** `tenant_settings` holds only genuinely
+  company-wide values the accounting module reads (e.g. `default_vat_rate`;
+  Nigerian VAT is federal). `property_settings` holds everything the guest site
+  renders (template, `booking_enabled`, and a `branding` JSONB of colors, logo,
+  hero images, fonts, tagline, section visibility/order). Rule of thumb:
+  **anything a guest sees is property-level; anything accounting reads is
+  tenant-level.** Every tenant and every property is guaranteed a settings row
+  by an `AFTER INSERT` trigger, so no query ever handles a missing settings row.
+- **No client path to create tenants or grant membership.** Neither `tenants`
+  nor `tenant_users` has an insert policy, by design. During early operation the
+  operator creates tenants and adds members manually via the SQL editor; this
+  will later move to `SECURITY DEFINER` RPCs with an audit trail. Do not add an
+  insert policy to either table until that RPC exists.
+- **RLS enforces both tenant isolation and role-gated writes at the database
+  level.** Reads are membership-scoped; destructive writes (update/delete of
+  tenants, properties, and settings) additionally require an admin role via
+  `is_tenant_admin()`. Application-level permission checks are for user
+  experience only and are **never** the sole guard on a destructive action.
 
 ---
 
@@ -256,12 +307,14 @@ public/         Static files served as-is
 
 ## 5. Naming conventions
 
-**Migrations** — one concern per file, ordered, descriptive:
+**Migrations** — one concern per file, **sequential three-digit numbering**
+(matches Palstro). No timestamp prefixes.
 ```
-supabase/migrations/<timestamp>_<snake_case_description>.sql
-# e.g. 20260718090000_create_tenants_and_rls.sql
-#      20260719112000_add_bookings_idempotency_index.sql
+supabase/migrations/NNN_<snake_case_description>.sql
+# e.g. 001_initial_tenancy.sql
+#      002_rooms_and_rates.sql
 ```
+Numbers are assigned in strict order and never reused.
 
 **RPCs** — `snake_case`, verb-first, tenant-aware, idempotent on writes:
 - Parameters prefixed `p_` (e.g. `p_tenant_id`, `p_payload`, `p_idempotency_key`).
@@ -271,9 +324,73 @@ supabase/migrations/<timestamp>_<snake_case_description>.sql
 
 ---
 
-## 6. Before-you-write-code checklist (run every session)
+## 6. Schema & data conventions
 
-1. **Read this file.** Confirm the 18 non-negotiables are fresh in mind.
+These apply to every migration and every table. They match Palstro.
+
+**Money.** All monetary columns are `numeric(14,2)`. Never `float` / `double
+precision`, never money in JSONB. *Floating point can't represent currency
+exactly; JSONB money can't be validated, constrained, or aggregated by the DB.*
+
+**Quantities.** All quantity columns are `numeric(14,4)`. Four decimals, not
+two, because recipe ingredients (0.0250 kg per plate) and bar shot measures are
+fractional. Rounding to 2 dp introduces drift that destroys the variance
+reports the system exists to produce.
+
+**Business date.** Every operational table (something that *happened*) carries
+`business_date date not null`, separate from `created_at timestamptz`. Hotels
+run a night audit, so a bar sale at 02:00 belongs to the previous business day.
+All reports, ledgers, and dashboards group by `business_date`; `created_at` is
+audit metadata only and is never the basis for a user-facing figure. Reinforces
+rules 8 and 12.
+
+**Actor columns.** Every table carries `created_by uuid references
+auth.users(id)` and `updated_by uuid references auth.users(id)`. **Audit columns
+are enforced by the shared `set_row_audit()` trigger, never trusted from the
+client, and no table may opt out** — a client that sends its own
+`created_by`/`updated_by` has it overwritten. The trigger fires `before insert
+or update` and is the actual mechanism; the column defaults are belt-and-braces.
+On INSERT it forces `created_at`/`created_by` (`coalesce(auth.uid(),
+new.created_by)`); on UPDATE it forces `updated_at`/`updated_by` and pins
+`created_at`/`created_by` back to their OLD values, so an update can never
+rewrite who created a row. The `coalesce(auth.uid(), ...)` preserves an explicit
+actor only when there is no session (a `SECURITY DEFINER` RPC or service_role),
+and **those RPCs must set the columns explicitly** because `auth.uid()` inside
+them resolves to the caller, not the intended actor. The customer's primary pain
+is staff theft, so "who did this" must be answerable for every row — an audit
+column the actor could set themselves would make the theft-detection reports
+worthless. *(An immutable, insert-only join table carries `created_by` only and
+gets an INSERT-only trigger; `updated_by` stays NULL until first update — NULL
+means "never edited".)*
+
+**Timestamps.** Every table carries `created_at` and `updated_at timestamptz`.
+`updated_at` (and `updated_by`) are maintained by the shared `set_row_audit()`
+trigger, never by application code.
+
+**Soft delete.** Records are never hard-deleted. Use `is_voided boolean` for
+transactional records and `deleted_at timestamptz` for master data. Filters
+stay NULL-safe per rule 5.
+
+**Document numbering.** Booking, invoice, receipt, and similar numbers are
+generated by a `SECURITY DEFINER` function backed by a per-tenant counter
+table — never by counting rows and adding one. Unique per tenant per document
+type. *Row-counting races under concurrency and reuses numbers after voids.*
+
+**Storage paths.** Every uploaded file is stored under
+`{tenant_id}/{property_id}/{category}/{filename}`. No file is ever written to a
+bucket root.
+
+**Property scoping.** A tenant is a company; a property is a physical hotel.
+Operational tables carry `property_id` in addition to `tenant_id`. Reports may
+aggregate across properties within a tenant, but operational screens are always
+scoped to one property. Property access is resolved via `get_property_ids()`
+alongside `get_tenant_ids()`; role-gated writes use `is_tenant_admin()`.
+
+---
+
+## 7. Before-you-write-code checklist (run every session)
+
+1. **Read this file.** Confirm the 19 non-negotiables are fresh in mind.
 2. **Does this touch a new table?** Add `tenant_id` + enable RLS + write the
    isolation policy in the same migration (rule 13).
 3. **Is this a list query?** Paginate it — no unbounded `.in()` / no `SELECT`
