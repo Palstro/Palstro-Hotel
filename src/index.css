@@ -1,111 +1,108 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Palstro-Hotels — platform default theme
+   --------------------------------------------------------------------------
+   PLATFORM DEFAULTS ONLY. Per CLAUDE.md Rule 17, no component file may ever
+   contain a color literal or a font-family literal. Every brand value lives
+   here as a CSS custom property and reaches components ONLY as a Tailwind
+   utility (bg-primary, text-charcoal, font-sans, …).
+
+   A later migration will let `property_settings.branding` override these
+   per property — at runtime it will re-set the same `--brand-*` custom
+   properties from the resolved branding JSONB, and every utility below,
+   which reads those variables through `var()`, will re-theme automatically.
+   That override mechanism is intentionally NOT built here. These are only
+   the fallback defaults the guest site renders with when a property has not
+   customised its brand.
+
+   Direction: warm, understated hospitality — a family-friendly island hotel,
+   not a SaaS dashboard. Terracotta over pure orange; cream over pure white;
+   warm charcoal over pure black.
+   ========================================================================== */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* ---- Brand palette (the single source of truth; override target) ------
+     CONTRAST IS CHECKED HERE, AT DEFINITION (see CLAUDE.md §8). Every token
+     carries the foregrounds proven safe ON it (as a background) or the
+     backgrounds it is safe on (as a foreground), with the measured WCAG ratio,
+     so no component build has to recompute contrast. AA thresholds: 4.5:1
+     normal text, 3:1 large text (>=24px, or >=18.66px bold). */
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Primary — deep warm terracotta, burnt-orange family. Related to Palstro's
+     orange but darker and less saturated so it reads as a hotel, not an app.
+     As BG: white text 6.4:1 (normal ✓). As TEXT: on cream 5.9:1, on sand
+     5.0:1 (both normal ✓). Do NOT put charcoal text on it (~1.7:1 ✗). */
+  --brand-primary: #9c4426;
+  /* A darker terracotta for hover/active on primary elements.
+     As BG: white text 8.6:1 (normal ✓). */
+  --brand-primary-hover: #7f3620;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Background — warm off-white cream. Never pure white.
+     As BG only. Safe text: charcoal 13.8:1, charcoal-muted 5.2:1, primary
+     5.9:1, accent 4.95:1 (all normal ✓). NOT safe: white text (1.1:1 ✗). */
+  --brand-background: #faf5ee;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+  /* Text — deep warm charcoal. Never pure black.
+     As TEXT: on cream 13.8:1, on sand 11.6:1 (normal ✓). As BG (dark footer):
+     white text 14.9:1 (normal ✓). */
+  --brand-text: #2c2621;
+  /* Muted charcoal for secondary/supporting copy (derived, same hue).
+     As TEXT: on cream 5.2:1 (normal ✓); on sand 4.4:1 (LARGE TEXT ONLY —
+     below 4.5, so never use for body copy on a sand surface). */
+  --brand-text-muted: #6f655c;
+
+  /* Surface — muted sand for separating sections off the cream background.
+     As BG only. Safe text: charcoal 11.6:1, primary 5.0:1 (normal ✓);
+     charcoal-muted 4.4:1 (large only). NOT safe: white text (1.3:1 ✗). */
+  --brand-surface: #ece1d2;
+  /* A hairline border/divider tone derived from the sand surface.
+     Decorative, non-text — no contrast requirement. */
+  --brand-border: #ddcfbb;
+
+  /* Accent — one single warm accent reserved for calls to action.
+     DARKENED from the first draft (#c2703b, ~4.0:1 ✗) so white button text
+     clears AA. As BG: white text 4.95:1 (normal ✓). Charcoal on it is ~3:1
+     (large only) — CTAs use WHITE text on this. */
+  --brand-accent: #aa5b2b;
+  /* Hover/active for accent CTAs.
+     As BG: white text 6.7:1 (normal ✓). */
+  --brand-accent-hover: #8c4a23;
+}
+
+/* ---- Tailwind theme: map utilities onto the brand custom properties ------
+   These `--color-*` / `--font-*` entries are what generate the utility
+   classes (bg-primary, text-charcoal, border-sand, font-sans). Each points
+   at a `--brand-*` variable above, so a future branding override changes the
+   brand variable in one place and every utility follows. */
+@theme {
+  /* Maven Pro is the sole family; it becomes the default `font-sans`. */
+  --font-sans: 'Maven Pro', ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: var(--brand-primary);
+  --color-primary-hover: var(--brand-primary-hover);
+  --color-cream: var(--brand-background);
+  --color-charcoal: var(--brand-text);
+  --color-charcoal-muted: var(--brand-text-muted);
+  --color-sand: var(--brand-surface);
+  --color-sand-border: var(--brand-border);
+  --color-accent: var(--brand-accent);
+  --color-accent-hover: var(--brand-accent-hover);
+}
+
+/* ---- Base ---------------------------------------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
   }
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  body {
+    margin: 0;
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }

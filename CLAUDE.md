@@ -386,6 +386,24 @@ aggregate across properties within a tenant, but operational screens are always
 scoped to one property. Property access is resolved via `get_property_ids()`
 alongside `get_tenant_ids()`; role-gated writes use `is_tenant_admin()`.
 
+**Composite-key consistency.** Where a table carries both `tenant_id` and a
+parent reference (a `property_id`, or a `room_type_id` that implies a property),
+consistency between them is enforced by a **composite foreign key** pointing at
+a unique key on the parent's paired columns — never by application discipline.
+*A row whose `tenant_id` disagrees with its parent's tenant is a cross-tenant
+leak that RLS cannot detect, because every policy trusts `tenant_id` directly.*
+The parent gets a `unique (id, tenant_id)` (or `unique (id, property_id)`) to
+serve as the FK target.
+```sql
+-- child binds the pair to the parent instead of two independent FKs:
+foreign key (property_id, tenant_id) references properties (id, tenant_id)
+```
+**Warning — soft-deleted parents do not cascade.** The FK cascade fires only on
+a *hard* delete; setting `deleted_at` on a room type leaves its rooms pointing at
+a still-present but deleted parent. Every query that joins `rooms` to
+`room_types` (or any child to a soft-deleted parent) must filter the parent's
+`deleted_at` itself, NULL-safe per rule 5 (`deleted_at is null`).
+
 ---
 
 ## 7. Before-you-write-code checklist (run every session)
@@ -411,3 +429,16 @@ alongside `get_tenant_ids()`; role-gated writes use `is_tenant_admin()`.
    (rule 16).
 10. **Handle the edge cases:** empty, error, loading, network-drop, concurrent
     actions — with clear user-facing messages. No silent failures.
+
+---
+
+## 8. Design conventions
+
+- **Contrast is a property of the token, not the component.** Every foreground
+  and background pairing must clear WCAG AA: **4.5:1 for normal text, 3:1 for
+  large text** (>=24px, or >=18.66px bold). Contrast is checked **when a token
+  is defined, not when a component is reviewed** — each color token in
+  `src/index.css` documents, beside its declaration, which foregrounds are safe
+  on it (and at what measured ratio), so building a component never requires
+  recomputing contrast. If a new pairing is needed, prove it at the token and
+  record the ratio there.
