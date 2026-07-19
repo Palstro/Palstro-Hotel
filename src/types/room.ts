@@ -12,11 +12,14 @@ export interface RoomType {
   property_id: string;
   name: string;
   description: string | null;
-  base_rate: number; // numeric(14,2) — advertised nightly rate
+  // numeric(14,2) columns. PostgREST returns numeric as STRINGS (e.g.
+  // "45000.00"), never JS numbers, to preserve precision — parse with
+  // parseNumeric before any arithmetic or formatting (CLAUDE.md §6, Money).
+  base_rate: string; // advertised nightly rate
   max_adults: number;
   max_children: number;
   bed_configuration: string | null;
-  size_sqm: number | null; // numeric(14,2), nullable
+  size_sqm: string | null;
   amenities: string[]; // text[] default '{}'
   images: string[]; // jsonb ordered array of image URLs
   display_order: number;

@@ -1,14 +1,44 @@
-import { MapPinIcon } from './ui/icons';
+import { MapPinIcon, ArrowRightIcon } from './ui/icons';
+import { parseNumeric } from '../lib/format';
 
 interface LocationSectionProps {
+  hotelName: string;
   address: string | null;
   directions: string | null;
+  latitude: string | null;
+  longitude: string | null;
 }
 
-// Address and (when present) directions from branding, beside a clearly-marked
-// placeholder where a map will go later. NO map is integrated here by design.
-// Caller renders this only when there is an address.
-export function LocationSection({ address, directions }: LocationSectionProps) {
+// Address (from the properties columns, 003) and, when present, directions (from
+// branding, presentational), beside a real OpenStreetMap embed when the property
+// has coordinates. The map is keyless — OSM's public embed iframe: no API key, no
+// billing account, no third-party script. When either coordinate is absent we
+// fall back to the marked placeholder rather than a broken or default-centred
+// map. Caller renders this section only when there is an address.
+export function LocationSection({
+  hotelName,
+  address,
+  directions,
+  latitude,
+  longitude,
+}: LocationSectionProps) {
+  // Coordinates arrive as PostgREST numeric strings; parse both. Either missing
+  // or unparseable -> no map, show the placeholder. No hardcoded fallback
+  // location (rule 17).
+  const lat = parseNumeric(latitude);
+  const lng = parseNumeric(longitude);
+  const hasMap = lat !== null && lng !== null;
+
+  // A ~0.01° box (~1km) around the point frames the marker without over-zooming.
+  const mapSrc = hasMap
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.005},${lat - 0.005},${lng + 0.005},${lat + 0.005}&layer=mapnik&marker=${lat},${lng}`
+    : undefined;
+
+  // Google Maps gives the turn-by-turn directions the embed cannot.
+  const directionsHref = hasMap
+    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+    : undefined;
+
   return (
     <section
       id="location"
@@ -54,18 +84,43 @@ export function LocationSection({ address, directions }: LocationSectionProps) {
             ) : null}
           </div>
 
-          {/* Placeholder for a future map integration — intentionally not a map. */}
-          <div
-            aria-hidden="true"
-            className="flex min-h-[16rem] items-center justify-center rounded-2xl border border-dashed border-sand-border bg-sand/40 text-center"
-          >
-            <div className="px-6">
-              <MapPinIcon className="mx-auto h-8 w-8 text-primary/60" />
-              <p className="mt-2 text-sm font-medium text-charcoal-muted">
-                Map coming soon
-              </p>
+          {hasMap ? (
+            <div>
+              {/* Rounded to match the room cards; overflow-hidden clips the
+                  iframe's square corners. No hard border. */}
+              <div className="overflow-hidden rounded-2xl">
+                <iframe
+                  title={`Map showing the location of ${hotelName}`}
+                  src={mapSrc}
+                  loading="lazy"
+                  className="block h-[300px] w-full border-0 lg:h-[400px]"
+                />
+              </div>
+              <a
+                href={directionsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 rounded text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
+              >
+                Get directions
+                <ArrowRightIcon className="h-4 w-4" />
+              </a>
             </div>
-          </div>
+          ) : (
+            // No coordinates: keep the marked placeholder — never a broken or
+            // default-centred map. Sized to match the map it stands in for.
+            <div
+              aria-hidden="true"
+              className="flex min-h-[300px] items-center justify-center rounded-2xl border border-dashed border-sand-border bg-sand/40 text-center lg:min-h-[400px]"
+            >
+              <div className="px-6">
+                <MapPinIcon className="mx-auto h-8 w-8 text-primary/60" />
+                <p className="mt-2 text-sm font-medium text-charcoal-muted">
+                  Map coming soon
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

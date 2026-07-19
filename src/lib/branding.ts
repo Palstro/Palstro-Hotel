@@ -7,7 +7,12 @@ import type { PropertyBranding } from '../types/tenant';
 //
 // Known keys the guest site reads (all optional):
 //   logo_url, tagline, hero_images[], about_text, about_image, amenities[],
-//   gallery_images[], address, directions, phone, email, social{}
+//   gallery_images[], directions, social{}
+//
+// NOT here: address, phone, email. Those moved to first-class properties columns
+// in 003 because invoices/receipts/tax documents read them too — branding is
+// presentation-only. directions and social links stay: they are genuinely
+// presentational and no accounting document reads them.
 
 export function brandingString(
   b: PropertyBranding,

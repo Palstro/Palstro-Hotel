@@ -5,6 +5,7 @@ import {
   brandingStringArray,
   brandingRecord,
 } from '../lib/branding';
+import { formatPropertyAddress } from '../lib/address';
 import { SiteHeader, type NavItem } from '../components/SiteHeader';
 import { HeroCarousel } from '../components/HeroCarousel';
 import { AboutSection } from '../components/AboutSection';
@@ -54,10 +55,13 @@ export function LandingPage() {
   const aboutImage = brandingString(b, 'about_image');
   const amenities = brandingStringArray(b, 'amenities');
   const galleryImages = brandingStringArray(b, 'gallery_images');
-  const address = brandingString(b, 'address');
+  // Address and contact come from the properties columns (003), not branding —
+  // they are also what invoices, receipts and confirmations read. Only the
+  // presentational bits (directions, social links) stay in branding.
+  const address = formatPropertyAddress(property);
+  const phone = property.phone?.trim() || null;
+  const email = property.email?.trim() || null;
   const directions = brandingString(b, 'directions');
-  const phone = brandingString(b, 'phone');
-  const email = brandingString(b, 'email');
   const socials = brandingRecord(b, 'social');
 
   // Nav lists only the sections that will actually render, so a link never
@@ -118,7 +122,13 @@ export function LandingPage() {
         ) : null}
 
         {address ? (
-          <LocationSection address={address} directions={directions} />
+          <LocationSection
+            hotelName={hotelName}
+            address={address}
+            directions={directions}
+            latitude={property.latitude}
+            longitude={property.longitude}
+          />
         ) : null}
       </main>
 

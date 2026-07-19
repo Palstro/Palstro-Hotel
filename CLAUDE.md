@@ -332,6 +332,20 @@ These apply to every migration and every table. They match Palstro.
 precision`, never money in JSONB. *Floating point can't represent currency
 exactly; JSONB money can't be validated, constrained, or aggregated by the DB.*
 
+Postgres `numeric` columns are returned by PostgREST as **strings**, never
+JavaScript numbers (this preserves the exact precision a JS `number` would lose).
+Type them as `string` in row types and parse explicitly (`parseNumeric`) before
+any arithmetic or comparison. Never rely on implicit coercion — `typeof col ===
+'number'` is always false, and `Number(col)` hidden inside a template literal is
+a silent bug waiting to happen.
+
+**Missing values.** When a formatter cannot produce a value (missing or
+unparseable input), it returns the shared `MISSING_VALUE` em-dash (`—`) from
+`src/lib/format.ts`, never an empty string. An empty string renders as a silent
+gap that looks like a layout bug and signals nothing; a visible dash reads as "no
+value", the way accounting reports show it. Every formatter uses the same
+placeholder so a missing number looks identical everywhere in the app.
+
 **Quantities.** All quantity columns are `numeric(14,4)`. Four decimals, not
 two, because recipe ingredients (0.0250 kg per plate) and bar shot measures are
 fractional. Rounding to 2 dp introduces drift that destroys the variance

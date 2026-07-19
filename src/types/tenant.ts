@@ -35,6 +35,20 @@ export interface Property {
   timezone: string;
   currency: string;
   night_audit_time: string; // sql `time`
+  // Location & contact — real columns (003), not branding: read by invoices,
+  // receipts, booking confirmations and tax documents, not only the guest site.
+  address_line: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string; // not null, defaults to 'Nigeria'
+  // numeric(10,7). PostgREST returns numeric columns as STRINGS (e.g.
+  // "4.3968311"), never JS numbers, to preserve precision — parse with
+  // parseNumeric before any arithmetic (CLAUDE.md §6, Money).
+  latitude: string | null;
+  longitude: string | null;
+  phone: string | null;
+  email: string | null;
   status: PropertyStatus;
   deleted_at: string | null;
   created_at: string;

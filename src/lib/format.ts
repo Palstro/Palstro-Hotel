@@ -2,20 +2,58 @@
 // amounts, and counts all arrive from the database (rule 17). Only generic,
 // non-tenant UI words ("adult", "children") live here.
 
+// The single placeholder every formatter returns when it cannot produce a value
+// (missing/unparseable input). An em dash reads as "no value" the way accounting
+// reports use it; an empty string would render as a silent gap indistinguishable
+// from a layout bug. Use this — never '' — anywhere a formatter has no value to
+// show, so a missing number looks the same everywhere in the app (CLAUDE.md §6).
+export const MISSING_VALUE = '—';
+
+// Parse a Postgres numeric column into a JS number, or null when it is
+// absent/unparseable.
+//
+// WHY THIS EXISTS: PostgREST returns numeric(p,s) columns as STRINGS (e.g.
+// "4.3968311", "45000.00"), never JS numbers, to avoid the float precision loss
+// a number would introduce. So `typeof col === 'number'` is always false and
+// arithmetic/formatting on the raw value silently misbehaves. Every numeric
+// column must be parsed explicitly here before any arithmetic, comparison, or
+// Intl formatting — never rely on implicit coercion (CLAUDE.md §6, Money).
+//
+// Guards Number('') === 0 by rejecting empty/whitespace input, and NaN by
+// requiring a finite result, so a bad value becomes null (caller decides the
+// fallback) rather than a silent 0 or NaN.
+export function parseNumeric(
+  value: string | number | null | undefined,
+): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
 // Format a money amount in the property's own currency (e.g. NGN -> ₦45,000).
-// Rates are advertised in whole units, so fraction digits are dropped for a
-// clean nightly price. An unknown currency code falls back to "CODE 45,000"
-// rather than throwing.
-export function formatCurrency(amount: number, currency: string): string {
+// Accepts the raw numeric column (string from PostgREST) or a number, and parses
+// it through parseNumeric first. Rates are advertised in whole units, so fraction
+// digits are dropped for a clean nightly price. An unknown currency code falls
+// back to "CODE 45,000" rather than throwing; an unparseable amount yields the
+// shared MISSING_VALUE dash, never a silent empty string.
+export function formatCurrency(
+  amount: number | string | null | undefined,
+  currency: string,
+): string {
+  const value = parseNumeric(amount);
+  if (value === null) return MISSING_VALUE;
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(value);
   } catch {
-    return `${currency} ${new Intl.NumberFormat().format(amount)}`;
+    return `${currency} ${new Intl.NumberFormat().format(value)}`;
   }
 }
 

@@ -1,5 +1,10 @@
 import type { RoomType } from '../types/room';
-import { formatCurrency, formatOccupancy, firstImageUrl } from '../lib/format';
+import {
+  formatCurrency,
+  formatOccupancy,
+  firstImageUrl,
+  parseNumeric,
+} from '../lib/format';
 import { AnchorButton } from './ui/AnchorButton';
 
 // Where the room CTA and the header's Book Now both point for now: the contact
@@ -78,6 +83,9 @@ function RoomsGrid({ children }: { children: React.ReactNode }) {
 
 function RoomCard({ room, currency }: { room: RoomType; currency: string }) {
   const image = firstImageUrl(room.images);
+  // size_sqm arrives as a numeric string ("25.00"); parse it so the display
+  // reads "25 m²", not "25.00 m²", and so the guard tests a real number.
+  const sizeSqm = parseNumeric(room.size_sqm);
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-sand-border bg-white/60">
@@ -124,12 +132,12 @@ function RoomCard({ room, currency }: { room: RoomType; currency: string }) {
             <dd>{formatOccupancy(room.max_adults, room.max_children)}</dd>
           </div>
 
-          {room.size_sqm != null ? (
+          {sizeSqm != null ? (
             <div className="flex items-center gap-2">
               <AreaIcon className="h-4 w-4 shrink-0 text-primary" />
               <dt className="sr-only">Room size</dt>
               <dd>
-                {room.size_sqm} m<sup>2</sup>
+                {sizeSqm} m<sup>2</sup>
               </dd>
             </div>
           ) : null}

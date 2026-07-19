@@ -12,8 +12,9 @@ interface ContactFooterProps {
 
 // Contact + footer. This is the anchor the Enquire buttons and Book Now point
 // at. Phone/email become tel:/mailto: links; social links render only for the
-// platforms present in the data. Everything is from branding — nothing here is
-// a hardcoded tenant value (rule 17).
+// platforms present in the data. Phone, email and address come from the
+// properties columns (003); social links come from branding — nothing here is a
+// hardcoded tenant value (rule 17).
 export function ContactFooter({
   hotelName,
   phone,
