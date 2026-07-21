@@ -1,10 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
-  "//": "SPA fallback for client-side routing. This app uses react-router with real URLs (/login, /admin), but Vercel only has an index.html — there is no /login.html on disk. Without a rewrite, a DIRECT visit or a browser refresh on /login or /admin would hit Vercel's filesystem, miss, and 404. The rewrite below hands every non-asset path to /index.html so react-router can resolve the route in the browser.",
-
-  "//assets": "The negative-lookahead source deliberately EXCLUDES real static assets so they are still served as files, never rewritten to HTML: anything under /assets (Vite's hashed JS/CSS bundles), and common top-level static files (favicon, robots.txt, sitemap, manifest, and any file with an extension). Only extensionless app routes fall through to the SPA fallback.",
-
   "rewrites": [
     {
       "source": "/((?!assets/|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.webmanifest|.*\\.[a-zA-Z0-9]+$).*)",
