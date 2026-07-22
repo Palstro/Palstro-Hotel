@@ -13,6 +13,11 @@ import {
   MaintenanceIcon,
   StaffIcon,
   AccountingIcon,
+  StoreIcon,
+  RequisitionsIcon,
+  PurchasesIcon,
+  SuppliersIcon,
+  StockCountsIcon,
 } from '../ui/icons';
 
 // The admin's navigation, defined once as data. Settling the FULL information
@@ -35,6 +40,11 @@ export type AdminModule =
   | 'rates'
   | 'food_beverage'
   | 'laundry'
+  | 'store'
+  | 'requisitions'
+  | 'purchases'
+  | 'suppliers'
+  | 'stock_counts'
   | 'maintenance'
   | 'staff'
   | 'reports'
@@ -43,11 +53,17 @@ export type AdminModule =
 
 // The four sidebar sections, in render order. Grouping is data too, so moving an
 // item between sections is a one-line change here.
-export type AdminNavGroup = 'daily' | 'revenue' | 'back_office' | 'configuration';
+export type AdminNavGroup =
+  | 'daily'
+  | 'revenue'
+  | 'inventory'
+  | 'back_office'
+  | 'configuration';
 
 export const ADMIN_NAV_GROUPS: { group: AdminNavGroup; label: string }[] = [
   { group: 'daily', label: 'Daily' },
   { group: 'revenue', label: 'Revenue' },
+  { group: 'inventory', label: 'Inventory' },
   { group: 'back_office', label: 'Back office' },
   { group: 'configuration', label: 'Configuration' },
 ];
@@ -142,6 +158,53 @@ export const ADMIN_NAV: AdminNavItem[] = [
     segment: 'laundry',
     module: 'laundry',
     group: 'revenue',
+    status: 'coming_soon',
+  },
+
+  // --- Inventory: the shared stock engine, one catalogue and one movement
+  // ledger feeding housekeeping, kitchen, bar and maintenance. See
+  // docs/ARCHITECTURE.md — inventory is built BEFORE F&B and housekeeping, since
+  // both consume it (a recipe deduction and an amenity issue are stock
+  // movements). Distinct from Revenue above: this is stock control, not a sales
+  // channel.
+  {
+    label: 'Store',
+    icon: StoreIcon,
+    segment: 'store',
+    module: 'store',
+    group: 'inventory',
+    status: 'coming_soon',
+  },
+  {
+    label: 'Requisitions',
+    icon: RequisitionsIcon,
+    segment: 'requisitions',
+    module: 'requisitions',
+    group: 'inventory',
+    status: 'coming_soon',
+  },
+  {
+    label: 'Purchases',
+    icon: PurchasesIcon,
+    segment: 'purchases',
+    module: 'purchases',
+    group: 'inventory',
+    status: 'coming_soon',
+  },
+  {
+    label: 'Suppliers',
+    icon: SuppliersIcon,
+    segment: 'suppliers',
+    module: 'suppliers',
+    group: 'inventory',
+    status: 'coming_soon',
+  },
+  {
+    label: 'Stock Counts',
+    icon: StockCountsIcon,
+    segment: 'stock-counts',
+    module: 'stock_counts',
+    group: 'inventory',
     status: 'coming_soon',
   },
 

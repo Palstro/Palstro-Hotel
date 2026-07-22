@@ -155,6 +155,55 @@ export const AccountingIcon = ({ className }: IconProps) => (
   </Line>
 );
 
+/* --- Inventory navigation -------------------------------------------------- */
+
+// Store — a stock crate / cube (the main store).
+export const StoreIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z" />
+    <path d="m3.5 7.5 8.5 4.5 8.5-4.5" />
+    <path d="M12 12v9" />
+  </Line>
+);
+
+// Requisitions — a clipboard form (request, then approve).
+export const RequisitionsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <rect x="5" y="5" width="14" height="16" rx="2" />
+    <path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+    <path d="M9 11h6M9 14h6M9 17h3" />
+  </Line>
+);
+
+// Purchases — a shopping cart (purchase orders).
+export const PurchasesIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <circle cx="9" cy="20" r="1.4" />
+    <circle cx="17" cy="20" r="1.4" />
+    <path d="M3 4h2l2.2 11.2a1.5 1.5 0 0 0 1.5 1.2h7.7a1.5 1.5 0 0 0 1.5-1.2L21 8H6" />
+  </Line>
+);
+
+// Suppliers — a delivery truck.
+export const SuppliersIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M3 6h11v9H3z" />
+    <path d="M14 9h4l3 3v3h-7z" />
+    <circle cx="7" cy="18" r="1.6" />
+    <circle cx="17.5" cy="18" r="1.6" />
+  </Line>
+);
+
+// Stock Counts — a grid of bins, one ticked (counted and reconciled).
+export const StockCountsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <rect x="4" y="4" width="7" height="7" rx="1" />
+    <rect x="13" y="4" width="7" height="7" rx="1" />
+    <rect x="4" y="13" width="7" height="7" rx="1" />
+    <path d="M13.5 17l2 2 4-4.5" />
+  </Line>
+);
+
 export const UserIcon = ({ className }: IconProps) => (
   <Line className={className}>
     <circle cx="12" cy="8" r="4" />

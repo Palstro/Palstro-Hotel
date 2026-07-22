@@ -23,6 +23,13 @@ with online booking.
 Separate product from Palstro (the ERP): separate codebase, Supabase project,
 Vercel deployment, auth, and data. They share patterns and standards only.
 
+**System map:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the whole-system
+map — the four layers (foundation / configuration / operations / financial), the
+three shared engines (inventory, folio, ledger), the hard dependency order, and
+the revised module build sequence. **Read it before starting any new module** so
+the module lands in the right layer, hangs off the right engine, and is built in
+the right order.
+
 ---
 
 ## 2. Engineering non-negotiables (19)
@@ -431,6 +438,9 @@ a still-present but deleted parent. Every query that joins `rooms` to
 ## 7. Before-you-write-code checklist (run every session)
 
 1. **Read this file.** Confirm the 19 non-negotiables are fresh in mind.
+   **Starting a new module?** Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+   first — the system map, shared engines, and dependency order that decide where
+   the module fits and what must exist before it.
 2. **Does this touch a new table?** Add `tenant_id` + enable RLS + write the
    isolation policy in the same migration (rule 13).
 3. **Is this a list query?** Paginate it — no unbounded `.in()` / no `SELECT`
