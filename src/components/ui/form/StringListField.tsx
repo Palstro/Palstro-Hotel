@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BaseFieldProps, FieldShell, controlClasses } from './FieldShell';
+import { FieldShell, controlClasses, type BaseFieldProps } from './FieldShell';
 import { CloseIcon, PlusIcon } from '../icons';
 
 interface StringListFieldProps extends BaseFieldProps {

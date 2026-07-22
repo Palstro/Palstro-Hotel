@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { usePropertyContext } from '../hooks/usePropertyContext';
 import { useRoomTypes } from '../hooks/useRoomTypes';
 import {
@@ -5,6 +6,7 @@ import {
   brandingStringArray,
   brandingRecord,
 } from '../lib/branding';
+import { applyBranding } from '../lib/theme';
 import { formatPropertyAddress } from '../lib/address';
 import { SiteHeader, type NavItem } from '../components/SiteHeader';
 import { HeroCarousel } from '../components/HeroCarousel';
@@ -34,6 +36,14 @@ export function LandingPage() {
     loading: roomsLoading,
     error: roomsError,
   } = useRoomTypes(property?.id ?? null, property?.tenant_id ?? null);
+
+  // Apply the property's branding to the CSS custom properties so a real visitor
+  // sees this property's theme, not the platform default (build 3, §4). Missing
+  // keys fall back to the defaults in index.css. Runs before the early returns so
+  // the hook order stays stable.
+  useEffect(() => {
+    if (settings) applyBranding(settings.branding);
+  }, [settings]);
 
   if (loading) return <LandingSkeleton />;
   if (error) return <LandingMessage title="Something went wrong" body={error.message} />;

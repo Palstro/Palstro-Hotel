@@ -68,6 +68,15 @@
   /* Hover/active for accent CTAs.
      As BG: white text 6.7:1 (normal ✓). */
   --brand-accent-hover: #8c4a23;
+
+  /* ---- Brand fonts (override target, same pattern as the colours) ---------
+     A property may pick one of the six curated pairings (lib/settings/fonts.ts);
+     lib/theme.ts re-sets these two variables at runtime and loads that pairing's
+     stylesheet. BODY drives running text (--font-sans below), DISPLAY drives
+     headings (the @layer base rule below). Both default to Maven Pro, the family
+     index.html preloads, so an un-themed property renders correctly. */
+  --brand-font-body: 'Maven Pro', ui-sans-serif, system-ui, sans-serif;
+  --brand-font-display: 'Maven Pro', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ---- Tailwind theme: map utilities onto the brand custom properties ------
@@ -76,8 +85,11 @@
    at a `--brand-*` variable above, so a future branding override changes the
    brand variable in one place and every utility follows. */
 @theme {
-  /* Maven Pro is the sole family; it becomes the default `font-sans`. */
-  --font-sans: 'Maven Pro', ui-sans-serif, system-ui, sans-serif;
+  /* Body and display families read the brand font variables, so a per-property
+     override (lib/theme.ts) re-themes every `font-sans` utility and every
+     heading by changing one variable — exactly as the colours do. */
+  --font-sans: var(--brand-font-body);
+  --font-display: var(--brand-font-display);
 
   --color-primary: var(--brand-primary);
   --color-primary-hover: var(--brand-primary-hover);
@@ -104,5 +116,16 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Headings use the DISPLAY family. It defaults to Maven Pro (== body), so this
+     changes nothing until a property picks a pairing with a distinct display
+     face, at which point every heading on the themed surface (guest site, and
+     the settings preview) re-themes with no per-component change. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
   }
 }

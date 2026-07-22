@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BaseFieldProps, FieldShell, controlClasses } from './FieldShell';
+import { FieldShell, controlClasses, type BaseFieldProps } from './FieldShell';
 import { formatCurrency, parseNumeric } from '../../../lib/format';
 
 interface CurrencyFieldProps extends BaseFieldProps {

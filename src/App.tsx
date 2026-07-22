@@ -17,7 +17,7 @@ import { ModuleGuard } from './components/admin/ModuleGuard';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { AdminIndexRedirect } from './pages/admin/AdminIndexRedirect';
-import { SettingsPlaceholderPage } from './pages/admin/SettingsPlaceholderPage';
+import { SettingsPage } from './pages/admin/SettingsPage';
 import { ModuleNotAvailablePage } from './pages/admin/ModuleNotAvailablePage';
 
 /**
@@ -90,7 +90,7 @@ const router = createBrowserRouter([
                 path: 'settings',
                 element: (
                   <ModuleGuard module="settings">
-                    <SettingsPlaceholderPage />
+                    <SettingsPage />
                   </ModuleGuard>
                 ),
               },

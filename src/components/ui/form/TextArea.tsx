@@ -1,4 +1,4 @@
-import { BaseFieldProps, FieldShell, controlClasses } from './FieldShell';
+import { FieldShell, controlClasses, type BaseFieldProps } from './FieldShell';
 
 interface TextAreaProps extends BaseFieldProps {
   value: string;

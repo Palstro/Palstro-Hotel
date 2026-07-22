@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { BaseFieldProps } from './FieldShell';
+import type { BaseFieldProps } from './FieldShell';
 
 interface ToggleProps extends BaseFieldProps {
   value: boolean;

@@ -1,4 +1,4 @@
-import { BaseFieldProps, FieldShell, controlClasses } from './FieldShell';
+import { FieldShell, controlClasses, type BaseFieldProps } from './FieldShell';
 
 interface ColorFieldProps extends BaseFieldProps {
   // A hex color string like '#9c4426'. This is tenant BRANDING data the admin is
