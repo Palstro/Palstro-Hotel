@@ -61,6 +61,11 @@ export interface Property {
 export interface TenantSettings {
   tenant_id: string;
   default_vat_rate: number; // numeric(5,4)
+  // Which admin modules this tenant sees (006). Values are AdminModule keys
+  // (adminNav.ts); typed as string[] here to keep this row type free of a
+  // components import, and narrowed by useEnabledModules. Never empty of
+  // 'settings' — a DB check constraint guarantees it.
+  enabled_modules: string[];
   created_at: string;
   updated_at: string;
   created_by: string | null;

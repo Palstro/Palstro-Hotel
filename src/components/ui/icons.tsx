@@ -101,6 +101,60 @@ export const ReportsIcon = ({ className }: IconProps) => (
   </Line>
 );
 
+// Front Desk — a concierge service bell.
+export const FrontDeskIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M3 19h18" />
+    <path d="M5 16a7 7 0 0 1 14 0" />
+    <path d="M12 6V4M9.5 4h5" />
+  </Line>
+);
+
+// Guests — a group of people (distinct from the single-person UserIcon and the
+// badged StaffIcon).
+export const GuestsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M2.8 20c0-3.2 2.6-5 6.2-5s6.2 1.8 6.2 5" />
+    <path d="M16.2 5.4a3 3 0 0 1 0 5.9M21.2 20c0-2.4-.9-4.1-2.4-5" />
+  </Line>
+);
+
+// Rates and Availability — a price tag (the nightly-rate calendar; kept visually
+// distinct from the Bookings calendar icon).
+export const RatesIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M3.5 11.5V4.8a1.3 1.3 0 0 1 1.3-1.3h6.7l8 8a1.5 1.5 0 0 1 0 2.1l-5.6 5.6a1.5 1.5 0 0 1-2.1 0l-8-8Z" />
+    <circle cx="7.5" cy="7.5" r="1.2" />
+  </Line>
+);
+
+// Maintenance — a wrench.
+export const MaintenanceIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M15 6.5a4 4 0 0 0-5.2 5.2l-6.1 6.1 2 2 6.1-6.1A4 4 0 0 0 17 8.5l-2.6 2.6-2-2L15 6.5Z" />
+  </Line>
+);
+
+// Staff — an ID badge with a person (distinct from the Guests group icon).
+export const StaffIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <rect x="4" y="3.5" width="16" height="17" rx="2" />
+    <path d="M9 3.5V6h6V3.5" />
+    <circle cx="12" cy="11" r="2.1" />
+    <path d="M8.5 17c0-2 1.6-3 3.5-3s3.5 1 3.5 3" />
+  </Line>
+);
+
+// Accounting — a bound ledger.
+export const AccountingIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19v15H7.5A2.5 2.5 0 0 0 5 19.5V4.5Z" />
+    <path d="M5 19.5A2.5 2.5 0 0 1 7.5 17H19v5H7.5A2.5 2.5 0 0 1 5 19.5Z" />
+    <path d="M9 6.5h6M9 9.5h4" />
+  </Line>
+);
+
 export const UserIcon = ({ className }: IconProps) => (
   <Line className={className}>
     <circle cx="12" cy="8" r="4" />

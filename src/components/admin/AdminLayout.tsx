@@ -2,11 +2,12 @@ import { useRef, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useActiveProperty } from '../../hooks/useActiveProperty';
 import { useTenantContext } from '../../hooks/useTenantContext';
+import { useEnabledModules } from '../../hooks/useEnabledModules';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { ADMIN_NAV, type AdminNavItem } from './adminNav';
+import { ADMIN_NAV, ADMIN_NAV_GROUPS, type AdminNavItem } from './adminNav';
 import { PropertySwitcher } from './PropertySwitcher';
 import { UserMenu } from './UserMenu';
-import { CloseIcon, MenuIcon } from '../ui/icons';
+import { ChevronDownIcon, CloseIcon, MenuIcon } from '../ui/icons';
 import { MISSING_VALUE } from '../../lib/format';
 
 // The admin shell (3.txt §2): persistent sidebar on desktop, slide-over drawer
@@ -149,10 +150,20 @@ function SidebarBrand({ tenantName }: { tenantName: string }) {
 }
 
 // The navigation list, shared between the desktop sidebar and the mobile drawer
-// so there is one source of nav markup. Built from ADMIN_NAV (§2). onNavigate
-// lets the mobile drawer close itself when a link is followed (the desktop
-// sidebar passes nothing, so it is a no-op there) — closing on the click avoids
-// a route-watching effect.
+// so there is one source of nav markup. Built from ADMIN_NAV, grouped into the
+// four sections of ADMIN_NAV_GROUPS. onNavigate lets the mobile drawer close
+// itself when a link is followed (the desktop sidebar passes nothing, so it is a
+// no-op there) — closing on the click avoids a route-watching effect.
+//
+// Items whose module the tenant has not enabled (006) are filtered out entirely,
+// regardless of ready/coming_soon status; a group left empty by that filter is
+// dropped so no heading ever sits over nothing.
+//
+// Each group is a native <details> (open by default): at 360px the full
+// thirteen-item nav is long, so the user can collapse sections they are not
+// using. Native <details> needs no JS state and no storage (constraint), stays
+// keyboard- and screen-reader accessible, and behaves identically on desktop and
+// in the mobile drawer.
 function NavList({
   slug,
   onNavigate,
@@ -160,15 +171,36 @@ function NavList({
   slug: string;
   onNavigate?: () => void;
 }) {
+  const { isEnabled } = useEnabledModules();
+
+  const groups = ADMIN_NAV_GROUPS.map((g) => ({
+    ...g,
+    items: ADMIN_NAV.filter(
+      (item) => item.group === g.group && isEnabled(item.module),
+    ),
+  })).filter((g) => g.items.length > 0);
+
   return (
     <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-4">
-      <ul className="space-y-1">
-        {ADMIN_NAV.map((item) => (
-          <li key={item.module}>
-            <NavItemLink slug={slug} item={item} onNavigate={onNavigate} />
-          </li>
-        ))}
-      </ul>
+      {groups.map((g) => (
+        <details
+          key={g.group}
+          open
+          className="group/nav mb-1"
+        >
+          <summary className="flex cursor-pointer list-none select-none items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-charcoal-muted transition-colors hover:bg-sand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-cream [&::-webkit-details-marker]:hidden">
+            <span>{g.label}</span>
+            <ChevronDownIcon className="h-4 w-4 shrink-0 transition-transform group-open/nav:rotate-180" />
+          </summary>
+          <ul className="mt-1 space-y-1">
+            {g.items.map((item) => (
+              <li key={item.module}>
+                <NavItemLink slug={slug} item={item} onNavigate={onNavigate} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
     </nav>
   );
 }

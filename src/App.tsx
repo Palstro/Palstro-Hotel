@@ -8,10 +8,12 @@ import { AuthProvider } from './hooks/useAuth';
 import { TenantContextProvider } from './hooks/useTenantContext';
 import { PropertyContextProvider } from './hooks/usePropertyContext';
 import { ActivePropertyProvider } from './hooks/useActiveProperty';
+import { EnabledModulesProvider } from './hooks/useEnabledModules';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/ui/Toast';
 import { AdminLayout } from './components/admin/AdminLayout';
+import { ModuleGuard } from './components/admin/ModuleGuard';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { AdminIndexRedirect } from './pages/admin/AdminIndexRedirect';
@@ -55,7 +57,13 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute requireAdmin>
         <ActivePropertyProvider>
-          <Outlet />
+          {/* Shares ONE fetch of the tenant's enabled_modules across the whole
+              /admin subtree — the sidebar filter and every ModuleGuard read it
+              without refetching. Inside ProtectedRoute, so it never queries for
+              a signed-out user. */}
+          <EnabledModulesProvider>
+            <Outlet />
+          </EnabledModulesProvider>
         </ActivePropertyProvider>
       </ProtectedRoute>
     ),
@@ -74,9 +82,20 @@ const router = createBrowserRouter([
             children: [
               // A bare /admin/:slug lands on Settings, the one working screen.
               { index: true, element: <Navigate to="settings" replace /> },
-              { path: 'settings', element: <SettingsPlaceholderPage /> },
-              // Not-yet-built modules render inside AdminLayout so the sidebar
-              // stays visible and the user can navigate away — never
+              // ModuleGuard renders the "not available" page if the module is
+              // disabled for this tenant (006). Settings can never be disabled,
+              // so this always passes today — it sets the pattern every future
+              // module route follows.
+              {
+                path: 'settings',
+                element: (
+                  <ModuleGuard module="settings">
+                    <SettingsPlaceholderPage />
+                  </ModuleGuard>
+                ),
+              },
+              // Not-yet-built (and disabled) modules render inside AdminLayout so
+              // the sidebar stays visible and the user can navigate away — never
               // react-router's raw 404 (§1).
               { path: '*', element: <ModuleNotAvailablePage /> },
             ],
