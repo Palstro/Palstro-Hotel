@@ -1,0 +1,298 @@
+import { useRef, useState } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useActiveProperty } from '../../hooks/useActiveProperty';
+import { useTenantContext } from '../../hooks/useTenantContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { ADMIN_NAV, type AdminNavItem } from './adminNav';
+import { PropertySwitcher } from './PropertySwitcher';
+import { UserMenu } from './UserMenu';
+import { CloseIcon, MenuIcon } from '../ui/icons';
+import { MISSING_VALUE } from '../../lib/format';
+
+// The admin shell (3.txt §2): persistent sidebar on desktop, slide-over drawer
+// on mobile, a header carrying the tenant name / property switcher / user menu,
+// and a content area that scrolls independently of the sidebar. Everything the
+// bookings, housekeeping, F&B and accounting modules will hang off. Mobile-first
+// — verified at 360px before desktop.
+//
+// The layout resolves the active property from the URL and renders one of three
+// terminal states before the shell: loading, load-error, or a clear
+// "not found / no access" message (NOT a redirect loop, per §1).
+
+export function AdminLayout() {
+  const { property, properties, loading, error, switchProperty } =
+    useActiveProperty();
+  const { memberships, tenantName } = useTenantContext();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Still resolving which properties this user may access.
+  if (loading) {
+    return <FullScreen busy label="Loading your properties…" />;
+  }
+
+  // The list itself failed to load — a real error, surfaced (rule 11), not a
+  // blank shell.
+  if (error) {
+    return (
+      <FullScreen>
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal">
+            Something went wrong
+          </h1>
+          <p className="mt-3 text-charcoal-muted">
+            We couldn't load your properties. Please refresh to try again.
+          </p>
+        </div>
+      </FullScreen>
+    );
+  }
+
+  // Slug present but not among the properties this user may operate — show a
+  // clear message rather than bouncing between routes (§1).
+  if (property === null) {
+    return (
+      <FullScreen>
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal">
+            Property not found
+          </h1>
+          <p className="mt-3 text-charcoal-muted">
+            This property doesn't exist, or you do not have access to it. If you
+            think this is a mistake, contact your hotel's administrator.
+          </p>
+        </div>
+      </FullScreen>
+    );
+  }
+
+  // Show the tenant that OWNS the active property (a multi-tenant user's active
+  // property may not belong to their first membership). Fall back to the tenant
+  // context's name, then the shared dash.
+  const owningTenantName =
+    memberships.find((m) => m.tenant_id === property.tenant_id)?.tenant?.name ??
+    tenantName ??
+    MISSING_VALUE;
+
+  return (
+    <div className="min-h-screen bg-cream">
+      {/* Desktop sidebar: fixed so the main column scrolls independently. */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-sand-border lg:bg-sand/40">
+        <SidebarBrand tenantName={owningTenantName} />
+        <NavList slug={property.slug} />
+      </aside>
+
+      {/* Main column, offset for the fixed sidebar on desktop. */}
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-sand-border bg-cream/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-cream/80 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open navigation menu"
+            aria-expanded={drawerOpen}
+            className="rounded-lg border border-sand-border bg-white/70 p-2 text-charcoal transition-colors hover:bg-sand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-cream lg:hidden"
+          >
+            <MenuIcon className="h-5 w-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-charcoal-muted">Property</p>
+            <p className="truncate text-sm font-semibold text-charcoal">
+              {property.name}
+              {/* Heledon's tenant and property share a name — showing both would
+                  read as the same text twice. Only append the tenant when it
+                  genuinely differs from the property (§3). */}
+              {owningTenantName !== property.name ? (
+                <span className="text-charcoal-muted"> · {owningTenantName}</span>
+              ) : null}
+            </p>
+          </div>
+
+          {/* Switcher only when there is a genuine choice (§1). */}
+          {properties.length > 1 ? (
+            <div className="w-44 sm:w-56">
+              <PropertySwitcher
+                property={property}
+                properties={properties}
+                onSwitch={switchProperty}
+              />
+            </div>
+          ) : null}
+
+          <UserMenu />
+        </header>
+
+        <main className="px-4 py-6 sm:px-6 lg:px-8">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Mobile slide-over drawer. */}
+      {drawerOpen ? (
+        <MobileDrawer
+          slug={property.slug}
+          tenantName={owningTenantName}
+          onClose={() => setDrawerOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function SidebarBrand({ tenantName }: { tenantName: string }) {
+  return (
+    <div className="flex h-16 items-center border-b border-sand-border px-5">
+      <span className="truncate text-base font-bold tracking-tight text-charcoal">
+        {tenantName}
+      </span>
+    </div>
+  );
+}
+
+// The navigation list, shared between the desktop sidebar and the mobile drawer
+// so there is one source of nav markup. Built from ADMIN_NAV (§2). onNavigate
+// lets the mobile drawer close itself when a link is followed (the desktop
+// sidebar passes nothing, so it is a no-op there) — closing on the click avoids
+// a route-watching effect.
+function NavList({
+  slug,
+  onNavigate,
+}: {
+  slug: string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-4">
+      <ul className="space-y-1">
+        {ADMIN_NAV.map((item) => (
+          <li key={item.module}>
+            <NavItemLink slug={slug} item={item} onNavigate={onNavigate} />
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+function NavItemLink({
+  slug,
+  item,
+  onNavigate,
+}: {
+  slug: string;
+  item: AdminNavItem;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+
+  // Coming-soon items are not links: visibly disabled, with a small badge, so
+  // the owner sees the finished shape without a dead route (§2).
+  if (item.status === 'coming_soon') {
+    return (
+      <span
+        aria-disabled="true"
+        className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-charcoal-muted/70"
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+        <span className="flex-1">{item.label}</span>
+        <span className="rounded-full bg-sand px-2 py-0.5 text-[10px] font-semibold tracking-wide text-charcoal-muted uppercase">
+          Soon
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <NavLink
+      to={`/admin/${slug}/${item.segment}`}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-cream ${
+          isActive
+            ? 'bg-primary text-white'
+            : 'text-charcoal hover:bg-sand'
+        }`
+      }
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      <span>{item.label}</span>
+    </NavLink>
+  );
+}
+
+function MobileDrawer({
+  slug,
+  tenantName,
+  onClose,
+}: {
+  slug: string;
+  tenantName: string;
+  onClose: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Trap focus inside the drawer and close on Escape (§2 accessibility).
+  useFocusTrap(panelRef, true, onClose);
+
+  return (
+    <div className="fixed inset-0 z-40 lg:hidden">
+      {/* Scrim: clicking it closes the drawer. aria-hidden — the labelled panel
+          is the interactive surface. */}
+      <button
+        type="button"
+        aria-label="Close navigation menu"
+        onClick={onClose}
+        className="absolute inset-0 bg-charcoal/40"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Admin navigation"
+        className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-cream shadow-xl"
+      >
+        <div className="flex h-16 items-center justify-between border-b border-sand-border px-5">
+          <span className="truncate text-base font-bold tracking-tight text-charcoal">
+            {tenantName}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close navigation menu"
+            className="rounded-lg p-2 text-charcoal transition-colors hover:bg-sand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-cream"
+          >
+            <CloseIcon className="h-5 w-5" />
+          </button>
+        </div>
+        <NavList slug={slug} onNavigate={onClose} />
+      </div>
+    </div>
+  );
+}
+
+// A neutral full-screen container for the layout's pre-shell states, matching
+// ProtectedRoute's loader styling.
+function FullScreen({
+  children,
+  busy,
+  label,
+}: {
+  children?: React.ReactNode;
+  busy?: boolean;
+  label?: string;
+}) {
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center bg-cream px-6"
+      aria-busy={busy || undefined}
+      aria-live={busy ? 'polite' : undefined}
+    >
+      {busy ? (
+        <>
+          <span className="sr-only">{label ?? 'Loading…'}</span>
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-sand-border border-t-primary" />
+        </>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}

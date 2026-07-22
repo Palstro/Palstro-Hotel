@@ -63,6 +63,70 @@ export const ArrowRightIcon = ({ className }: IconProps) => (
   </Line>
 );
 
+/* --- Admin navigation ----------------------------------------------------- */
+
+export const SettingsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+  </Line>
+);
+
+export const BookingsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <rect x="3.5" y="5" width="17" height="16" rx="2" />
+    <path d="M3.5 9h17M8 3v4M16 3v4M8 13h3M8 17h8" />
+  </Line>
+);
+
+export const RoomsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M3 21V8l9-5 9 5v13" />
+    <path d="M3 21h18M9 21v-6h6v6M8 11h.01M16 11h.01" />
+  </Line>
+);
+
+export const HousekeepingIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M6 3v8M4 5h4M6 11l-1 10h2l-1-10" />
+    <path d="M14 3c3 0 6 2 6 6h-6V3Z" />
+    <path d="M14 9v12" />
+  </Line>
+);
+
+export const ReportsIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M4 20V4M4 20h16" />
+    <path d="M8 20v-6M12 20V8M16 20v-9" />
+  </Line>
+);
+
+export const UserIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+  </Line>
+);
+
+export const SignOutIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+    <path d="M10 12H3M6 8l-3 4 3 4" />
+  </Line>
+);
+
+export const PlusIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M12 5v14M5 12h14" />
+  </Line>
+);
+
+export const ChevronUpDownIcon = ({ className }: IconProps) => (
+  <Line className={className}>
+    <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+  </Line>
+);
+
 /* --- Contact -------------------------------------------------------------- */
 
 export const PhoneIcon = ({ className }: IconProps) => (

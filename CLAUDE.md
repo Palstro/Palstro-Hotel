@@ -391,8 +391,16 @@ table — never by counting rows and adding one. Unique per tenant per document
 type. *Row-counting races under concurrency and reuses numbers after voids.*
 
 **Storage paths.** Every uploaded file is stored under
-`{tenant_id}/{property_id}/{category}/{filename}`. No file is ever written to a
-bucket root.
+`{tenant_id}/{property_id}/{category}/{size}/{filename}`. No file is ever written
+to a bucket root. Storage RLS parses the `tenant_id` from the first path segment
+to gate writes, so a malformed first segment fails closed.
+
+**Storage files and their `media_assets` row are deleted together, ALWAYS.** A
+file is only ever created alongside its row and only ever removed alongside it
+(remove the objects first, then soft-delete the rows — see `deleteMediaAsset`).
+*Why: a file with no row is invisible — no screen lists it, the quota never
+counts it — yet it bills egress forever. The row is the only handle we have on
+the bytes; lose it and the file is unrecoverable dead weight on the bill.*
 
 **Property scoping.** A tenant is a company; a property is a physical hotel.
 Operational tables carry `property_id` in addition to `tenant_id`. Reports may
